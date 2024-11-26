@@ -1,0 +1,12 @@
+mlflowtensor/
+data/
+mlflowtensor/lib/python3.11/site-packages/tensorflow/compiler/mlir/stablehlo/stablehlo_extension.so
+mlflowtensor/lib/python3.11/site-packages/clang/native/libclang.dylib
+mlflowtensor/lib/python3.11/site-packages/pyarrow/libarrow.1801.dylib
+mlflowtensor/lib/python3.11/site-packages/tensorflow/libtensorflow_cc.2.dylib
+data
+mlflow.db
+mlrunsmlflowtensor/
+mlflowtensor/
+mlflowtensor/
+mlruns
