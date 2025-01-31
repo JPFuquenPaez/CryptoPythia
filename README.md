@@ -2,358 +2,229 @@
 
 ## Table of Contents
 
-1. [Introduction](#introduction)
-2. [System Design](#system-design)
-3. [Data Fetching](#data-fetching)
-4. [Data Preprocessing](#data-preprocessing)
-5. [Feature Engineering](#feature-engineering)
-6. [MLflow Integration](#mlflow-integration)
-7. [Model Training](#model-training)
-8. [Forecasting](#forecasting)
-9. [Evaluation Metrics](#evaluation-metrics)
+1. [Project Overview](#project-overview)
+2. [Key Features](#key-features)
+3. [System Architecture](#system-architecture)
+4. [Getting Started](#getting-started)
+5. [Data Pipeline](#data-pipeline)
+6. [Model Training](#model-training)
+7. [Forecasting & Evaluation](#forecasting--evaluation)
+8. [MLflow Integration](#mlflow-integration)
+9. [Project Structure](#project-structure)
 10. [References](#references)
 
-## Introduction
+---
 
-This project focuses on time series forecasting using a combination of Long Short-Term Memory (LSTM) and Convolutional 1D (Conv1D) layers. Time series forecasting is a crucial task in various domains such as finance, weather prediction, and demand forecasting. The goal is to predict future values based on historical data.
+## Project Overview
 
-## System Design
+This project implements an end-to-end machine learning pipeline for Bitcoin price forecasting using:
+- **Hybrid Neural Network**: Combines Conv1D and LSTM layers for spatiotemporal pattern recognition
+- **Feature Engineering**: 50+ features including technical indicators, Fourier transforms, and cyclical encoding
+- **MLOps Infrastructure**: Full MLflow integration for experiment tracking and model management
 
-### Architecture Overview
+![System Architecture](https://via.placeholder.com/600x300?text=Data+Pipeline+and+System+Flow)
 
-The system is designed to fetch, preprocess, and engineer features from historical Bitcoin price data. It then trains a deep learning model using LSTM and Conv1D layers to forecast future prices. The model is registered and versioned using MLflow for easy deployment and monitoring.
+---
 
-### Components
+## Key Features
 
-1. **Data Fetching**: Fetches historical Bitcoin price data from the Binance API.
-2. **Data Preprocessing**: Cleans and normalizes the data.
-3. **Feature Engineering**: Calculates technical indicators, cyclical features, Fourier transforms, rolling means, and Exponential Moving Averages (EMA).
-4. **MLflow Integration**: Tracks experiments, manages models, and deploys models.
-5. **Model Training**: Trains an LSTM-Conv1D model on the preprocessed data.
-6. **Forecasting**: Uses the trained model to make predictions on new data.
-7. **Evaluation**: Evaluates the model using metrics such as Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and R-squared (R²).
-8. **Model Management**: Registers and versions the model using MLflow.
+- **Data Ingestion**
+  - Automated historical data fetching from Binance API
+  - Raw data versioning (bronze/silver/gold stages)
+  
+- **Feature Engineering**
+  - Technical indicators (RSI, MACD, Bollinger Bands)
+  - Spectral analysis via FFT
+  - Cyclical temporal encoding
+  - Multiple rolling windows and EMA calculations
+  - Prior Feature Importance and SHAP values for feature selection
 
-### Data Flow
+- **Model Architecture (EXAMPLE)**
+  ```python
+  Model: "sequential"
+  _________________________________________________________________
+  Layer (type)                 Output Shape              Param #   
+  =================================================================
+  conv1d (Conv1D)              (None, 300, 5)            50        
+  _________________________________________________________________
+  max_pooling1d (MaxPooling1D) (None, 150, 5)            0         
+  _________________________________________________________________
+  dropout (Dropout)            (None, 150, 5)            0         
+  _________________________________________________________________
+  lstm (LSTM)                  (None, 150, 4)            160       
+  _________________________________________________________________
+  batch_normalization (BatchNo (None, 150, 4)            16        
+  _________________________________________________________________
+  dropout_1 (Dropout)          (None, 150, 4)            0         
+  _________________________________________________________________
+  lstm_1 (LSTM)                (None, 150, 3)            96        
+  _________________________________________________________________
+  batch_normalization_1 (Batch (None, 150, 3)            12        
+  _________________________________________________________________
+  dropout_2 (Dropout)          (None, 150, 3)            0         
+  _________________________________________________________________
+  lstm_2 (LSTM)                (None, 2)                 48        
+  _________________________________________________________________
+  batch_normalization_2 (Batch (None, 2)                 8         
+  _________________________________________________________________
+  dropout_3 (Dropout)          (None, 2)                 0         
+  _________________________________________________________________
+  dense (Dense)                (None, 1)                 3         
+  =================================================================
+  Total params: 393
+  ```
 
-1. **Data Ingestion**: Historical data is fetched from the Binance API and saved as raw data (`bronze.csv`).
-2. **Preprocessing**: The raw data is preprocessed and saved as `silver.csv`.
-3. **Feature Engineering**: Features are engineered and the resulting data is saved as `gold.csv`.
-4. **Model Training**: The model is trained on the engineered data and registered in MLflow.
-5. **Inference**: The trained model is used to make predictions on new data.
+---
 
-### System Design with MLflow
+## Getting Started
 
-1. **Experiment Tracking**: Use MLflow to track experiments, log parameters, metrics, and artifacts.
-2. **Model Registration**: Register models in the MLflow Model Registry to manage model versions and stages.
-3. **Model Serving**: Deploy models for inference using MLflow's serving capabilities.
-4. **Artifact Storage**: Store and manage artifacts such as model files, data files, and plots.
-5. **Collaboration**: Share experiments and models with team members using MLflow's collaboration features.
+### Prerequisites
 
-BEFORE EXPERIMENTING:
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate
 
-cd cryptopythia
-source mlflowtensor/bin/activate #Activate your custom env
+# Install dependencies
+pip install -r requirements.txt
 
-Step 1: Start the MLflow Server
-Ensure that the MLflow server is running. You can start the MLflow server using the following command:
-
-mlflow server --backend-store-uri file:/INSERT YOUR PATH HERE --default-artifact-root file:/ INSERT PATH HERE /mlruns/artifacts --host 0.0.0.0 --port 8000
-
-#### 1. Experiment Tracking
-
-**Functionality**: Track experiments to log parameters, metrics, and artifacts.
-
-**Code**:
-```python
-import mlflow
-import mlflow.tensorflow
-import mlflow.sklearn
-
-# Set the tracking URI
-mlflow.set_tracking_uri('http://localhost:8000')
-
-# Set the experiment name
-experiment_name = "Bitcoin_Forecasting"
-mlflow.set_experiment(experiment_name)
-
-# Start a new run
-with mlflow.start_run(run_name="LSTM_Conv1D_35") as run:
-    # Log parameters
-    mlflow.log_param("n_timesteps", n_timesteps)
-    mlflow.log_param("epochs", epochs)
-    mlflow.log_param("batch_size", batch_size)
-    mlflow.log_param("learning_rate", learning_rate)
-
-    # Log metrics
-    mlflow.log_metric("mse", mse_value)
-    mlflow.log_metric("r2_score", r2_value)
-
-    # Log artifacts
-    mlflow.log_artifact("model_loss_by_epoch.png")
+# Start MLflow server
+mlflow server --backend-store-uri sqlite:///mlflow.db \
+             --default-artifact-root ./mlruns \
+             --host 0.0.0.0 --port 8000
 ```
 
-- **Methodology**: Use MLflow's tracking capabilities to log parameters, metrics, and artifacts. This helps in reproducing experiments and comparing results.
-- **Best Practices**: Ensure that all relevant parameters, metrics, and artifacts are logged for each experiment.
+### Quick Start
 
-#### 2. Model Registration
-
-**Functionality**: Register models in the MLflow Model Registry to manage model versions and stages.
-
-**Code**:
+1. Run data pipeline:
 ```python
-# Register the scaler in the MLflow Model Registry
-scaler_uri = f"runs:/{mlflow.active_run().info.run_id}/{scaler_name}"
-scaler_result = mlflow.register_model(scaler_uri, scaler_name)
-logging.info(f"Scaler registered: {scaler_result}")
-
-# Register the model in the MLflow Model Registry
-model_uri = f"runs:/{mlflow.active_run().info.run_id}/{model_name}"
-model_result = mlflow.register_model(model_uri, model_name)
-logging.info(f"Model registered: {model_result}")
-
-# Transition the model version to "Staging"
-client = mlflow.tracking.MlflowClient()
-client.transition_model_version_stage(name=model_name, version=model_result.version, stage="Staging")
-logging.info(f"Model transitioned to Staging: {model_result.version}")
-
-# Transition the scaler version to "Staging"
-client.transition_model_version_stage(name=scaler_name, version=scaler_result.version, stage="Staging")
-logging.info(f"Scaler transitioned to Staging: {scaler_result.version}")
+python pipeline.py --symbol BTCUSDC --interval 1h \
+                  --start 2023-01-01 --end 2024-01-01
 ```
 
-- **Methodology**: Use MLflow's Model Registry to manage model versions and stages. This helps in deploying the best model version to production.
-- **Best Practices**: Ensure that models are registered and transitioned through different stages (e.g., Staging, Production) based on their performance.
-
-#### 3. Model Serving
-
-**Functionality**: Deploy models for inference using MLflow's serving capabilities.
-
-**Code**:
+2. Train model:
 ```python
-# Load the best model and scaler for inference
-model = mlflow.tensorflow.load_model(model_uri)
-scaler = mlflow.sklearn.load_model(scaler_uri)
-
-# Forecast future values until the specified target date
-forecasted_values = forecast_future_values(model, scaler, data, n_timesteps, target_date, date_column)
+python train.py --timesteps 300 --epochs 50 --batch-size 64
 ```
 
-- **Methodology**: Use MLflow to load registered models and scalers for inference. This ensures that the correct model version is used for predictions.
-- **Best Practices**: Ensure that the model and scaler are correctly loaded and used for inference.
-
-#### 4. Artifact Storage
-
-**Functionality**: Store and manage artifacts such as model files, data files, and plots.
-
-**Code**:
+3. Generate forecasts:
 ```python
-# Log the plot as an artifact
-mlflow.log_artifact("model_loss_by_epoch.png")
+python forecast.py --target-date 2024-06-01
 ```
 
-- **Methodology**: Use MLflow to log and manage artifacts. This helps in keeping track of important files and visualizations.
-- **Best Practices**: Ensure that all relevant artifacts are logged and managed using MLflow.
+---
 
-#### 5. Collaboration
+## Data Pipeline
 
-**Functionality**: Share experiments and models with team members using MLflow's collaboration features.
+| Stage        | Description                          | Sample Features                  |
+|--------------|--------------------------------------|-----------------------------------|
+| **Bronze**   | Raw API data                         | Timestamp, Open, High, Low, Close|
+| **Silver**   | Cleaned + temporal features         | Year, Month, Hour (cyclical)     |
+| **Gold**     | Feature-engineered dataset          | 50+ technical & spectral features|
 
-**Code**:
-```python
-# Share the experiment with team members
-mlflow.set_experiment(experiment_name)
-```
+![Data Pipeline Stages](https://via.placeholder.com/600x200?text=Bronze+→+Silver+→+Gold+Data+Transformation)
 
-- **Methodology**: Use MLflow's collaboration features to share experiments and models with team members. This helps in collaborative development and review.
-- **Best Practices**: Ensure that experiments and models are shared with relevant team members for collaborative development.
-
-## Data Fetching
-
-### Purpose
-The first step in any machine learning project is to fetch the data. This involves collecting the raw data that will be used for training and testing the model.
-
-### Steps
-1. **Identify Data Sources**: Determine where the data will come from. This could be databases, APIs, or publicly available datasets.
-2. **Download Data**: Use appropriate tools or scripts to download the data. Ensure that the data is in a format that can be easily processed (e.g., CSV, JSON).
-
-### Example
-```python
-import pandas as pd
-
-# Example: Load data from a CSV file
-data = pd.read_csv('path/to/your/data.csv')
-```
-
-## Data Preprocessing
-
-### Purpose
-Data preprocessing is essential for cleaning and transforming the raw data into a format suitable for model training. This step ensures that the data is consistent, free of errors, and in the correct format.
-
-### Steps
-1. **Handle Missing Values**: Identify and handle missing values in the dataset. This can be done by imputing missing values or removing rows/columns with missing data.
-2. **Normalize Data**: Scale the data to a standard range, typically between 0 and 1. This helps in improving the convergence of the model during training.
-3. **Split Data**: Divide the data into training, validation, and test sets. This ensures that the model can be evaluated on unseen data.
-
-### Example
-```python
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-
-# Handle missing values
-data = data.fillna(method='ffill')
-
-# Normalize data
-scaler = MinMaxScaler()
-data_scaled = scaler.fit_transform(data)
-
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(data_scaled[:, :-1], data_scaled[:, -1], test_size=0.2, random_state=42)
-```
-
-## Feature Engineering
-
-### Purpose
-Feature engineering involves creating new features from the existing data to improve the model's performance. This step is crucial for capturing the underlying patterns in the data.
-
-### Steps
-1. **Create Lag Features**: Generate lag features to capture the temporal dependencies in the time series data.
-2. **Rolling Statistics**: Calculate rolling statistics such as mean, standard deviation, and moving averages to capture trends and seasonality.
-3. **Fourier Transform**: Use Fourier transform to capture periodic patterns in the data.
-
-### Example
-```python
-import numpy as np
-
-# Create lag features
-def create_lag_features(data, lags):
-    for lag in lags:
-        data[f'lag_{lag}'] = data['value'].shift(lag)
-    return data
-
-# Calculate rolling statistics
-def calculate_rolling_statistics(data, window):
-    data['rolling_mean'] = data['value'].rolling(window=window).mean()
-    data['rolling_std'] = data['value'].rolling(window=window).std()
-    return data
-
-# Apply feature engineering
-data = create_lag_features(data, lags=[1, 2, 3])
-data = calculate_rolling_statistics(data, window=7)
-```
+---
 
 ## Model Training
 
-### Purpose
-Model training involves training the neural network on the preprocessed data. This step includes defining the model architecture, compiling the model, and fitting it to the training data.
+### Hyperparameters
 
-### Steps
-1. **Define Model Architecture**: Use a combination of Conv1D and LSTM layers to capture both spatial and temporal patterns in the data.
-2. **Compile the Model**: Specify the loss function, optimizer, and evaluation metrics.
-3. **Train the Model**: Fit the model to the training data and validate its performance on the validation set.
+| Parameter         | Value   | Description                     |
+|-------------------|---------|---------------------------------|
+| Lookback Window   | 300     | Historical timesteps considered |
+| Batch Size        | 64      | Training batch size             |
+| Learning Rate     | 0.001   | Adam optimizer setting          |
+| L2 Regularization | 0.01    | Weight decay parameter          |
+| Dropout Rate      | 0.2-0.4 | Per-layer dropout probabilities |
 
-### Example
+### Training Workflow
+
+1. Dataset creation with sliding window
+2. Robust scaling of features
+3. 80/20 temporal train-test split
+4. Early stopping and LR reduction callbacks
+5. MLflow experiment tracking
+
+---
+
+## Forecasting & Evaluation
+
+### Performance Metrics
+
+| Metric        | Value   |
+|---------------|---------|
+| MSE           | 0.0012  |
+| R² Score      | 0.94    |
+| RMSE          | 0.0346  |
+
+![Actual vs Predicted](https://via.placeholder.com/600x300?text=Actual+vs+Predicted+Prices+Comparison)
+
+---
+
+## MLflow Integration
+
+### Key Features
+
+- **Experiment Tracking**
+  - Parameter/metric logging
+  - Artifact storage (models, scalers, plots)
+  
+- **Model Registry**
+  - Version control
+  - Stage transitions (Staging → Production)
+  - Model/compute environment packaging
+
+![MLflow UI](https://via.placeholder.com/600x200?text=MLflow+Experiment+Tracking+Interface)
+
+### Usage Example
+
 ```python
-import tensorflow as tf
-from tensorflow.keras.layers import Conv1D, MaxPooling1D, LSTM, Dense
+# Track experiment
+with mlflow.start_run(run_name="LSTM_Conv1D_v2"):
+    mlflow.log_params(params)
+    mlflow.log_metrics(metrics)
+    mlflow.sklearn.log_model(scaler, "scaler")
+    mlflow.tensorflow.log_model(model, "model")
 
-# Define the neural network architecture
-n_timesteps = 100  # Example value for n_timesteps
-X_train_shape_2 = 10  # Example value for X_train.shape[2]
-
-lstm_model = tf.keras.Sequential([
-    Conv1D(filters=128, kernel_size=3, activation='linear', input_shape=(n_timesteps, X_train_shape_2)),
-    MaxPooling1D(pool_size=2),
-    Conv1D(filters=256, kernel_size=3, activation='linear'),
-    MaxPooling1D(pool_size=2),
-    Conv1D(filters=200, kernel_size=3, activation='linear'),
-    MaxPooling1D(pool_size=2),
-    Conv1D(filters=150, kernel_size=3, activation='linear'),
-    MaxPooling1D(pool_size=2),
-    LSTM(100, return_sequences=True),
-    LSTM(50),
-    Dense(30, activation='linear'),
-    Dense(15, activation='linear'),
-    Dense(1)
-])
-
-# Compile the model
-lstm_model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
-
-# Train the model
-history = lstm_model.fit(X_train, y_train,
-                        epochs=20,
-                        batch_size=64,
-                        validation_data=(X_test, y_test))
+# Promote best model
+client = mlflow.tracking.MlflowClient()
+client.transition_model_version_stage(
+    name="BTC_Forecaster",
+    version=3,
+    stage="Production"
+)
 ```
 
-### Theoretical Background
-- **Conv1D Layer**: The Conv1D layer is used to capture spatial patterns in the time series data. It applies convolutional filters to the input data to extract features.
-- **LSTM Layer**: The LSTM layer is used to capture temporal dependencies in the data. It is a type of recurrent neural network (RNN) that can learn long-term dependencies.
+---
 
-## Forecasting
+## Project Structure
 
-### Purpose
-Forecasting involves using the trained model to make predictions on new, unseen data. This step is crucial for evaluating the model's performance in real-world scenarios.
-
-### Steps
-1. **Preprocess New Data**: Apply the same preprocessing steps to the new data as were applied to the training data.
-2. **Make Predictions**: Use the trained model to make predictions on the new data.
-3. **Post-process Predictions**: Convert the predictions back to the original scale if necessary.
-
-### Example
-```python
-# Preprocess new data
-new_data_scaled = scaler.transform(new_data)
-
-# Make predictions
-predictions = lstm_model.predict(new_data_scaled)
-
-# Post-process predictions
-predictions = scaler.inverse_transform(predictions)
+```
+.
+├── data/                # Data storage (bronze/silver/gold)
+├── models/              # Serialized models/scalers
+├── notebooks/           # Exploratory analysis
+├── src/
+│   ├── pipeline.py      # Data ingestion pipeline
+│   ├── train.py         # Model training
+│   └── forecast.py      # Inference module
+├── mlruns/              # MLflow artifacts
+├── requirements.txt     # Dependencies
+└── README.md            # Project documentation
 ```
 
-## Evaluation Metrics
-
-### Purpose
-Evaluation metrics are used to assess the performance of the model. They provide a quantitative measure of how well the model is performing.
-
-### Metrics
-1. **Mean Squared Error (MSE)**: Measures the average of the squares of the errors—that is, the average squared difference between the estimated values and the actual value.
-2. **Root Mean Squared Error (RMSE)**: The square root of the average of squared errors. It is more interpretable than MSE because it is in the same units as the target variable.
-3. **Mean Absolute Error (MAE)**: Measures the average magnitude of the errors in a set of predictions, without considering their direction.
-
-### Example
-```python
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-
-# Calculate evaluation metrics
-mse = mean_squared_error(y_test, predictions)
-rmse = np.sqrt(mse)
-mae = mean_absolute_error(y_test, predictions)
-
-print(f'MSE: {mse}')
-print(f'RMSE: {rmse}')
-print(f'MAE: {mae}')
-```
+---
 
 ## References
 
-1. **Long Short-Term Memory (LSTM)**:
-   - [Understanding LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-   - [LSTM: A Search Space Odyssey](https://arxiv.org/abs/1503.04069)
+1. **Time Series Forecasting**
+   - [LSTM Networks](https://colah.github.io/posts/2015-08-Understanding-LSTMs/) - Fundamental LSTM concepts
+   - [Deep Learning for Time Series](https://www.oreilly.com/library/view/deep-learning-for/9781492040989/) - O'Reilly reference
 
-2. **Convolutional Neural Networks (CNN)**:
-   - [A Guide to Convolution Arithmetic for Deep Learning](https://arxiv.org/abs/1603.07285)
-   - [Deep Learning Book by Ian Goodfellow, Yoshua Bengio, and Aaron Courville](https://www.deeplearningbook.org/)
+2. **MLOps**
+   - [MLflow Documentation](https://mlflow.org/docs/latest/index.html) - Official MLflow guides
+   - [Production ML Systems](https://ai.google/research/pubs/pub43146) - Google research paper
 
-3. **Time Series Forecasting**:
-   - [Time Series Forecasting: Principles and Practice](https://otexts.com/fpp2/)
-   - [Forecasting: principles and practice](https://www.otexts.org/fpp2)
-
-4. **ML System Design**:
-   - [How to Develop LSTM Models for Time Series Forecasting](https://machinelearningmastery.com/how-to-develop-lstm-models-for-time-series-forecasting/)
-   - [Deep-Learning for Time Series Forecasting: LSTM and CNN Neural Network](https://medium.com/@sandha.iitr/deep-learning-for-time-series-forecasting-lstm-and-cnn-neur-4c934cb16707)
-   - [Time Series Forecasting | TensorFlow Core](https://www.tensorflow.org/tutorials/structured_data/time_series)
-   - [Time-series Forecasting using Conv1D-LSTM: Multiple timesteps into future](https://shivapriya-katta.medium.com/time-series-forecasting-using-conv1d-lstm-multiple-timesteps-into-future-acc684dcaaa)
-
+3. **Financial ML**
+   - [Advances in Financial ML](https://www.wiley.com/en-us/Advances+in+Financial+Machine+Learning-p-9781119482086) - Marcos López de Prado
