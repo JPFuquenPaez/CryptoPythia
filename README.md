@@ -50,6 +50,16 @@ The system is designed to fetch, preprocess, and engineer features from historic
 4. **Artifact Storage**: Store and manage artifacts such as model files, data files, and plots.
 5. **Collaboration**: Share experiments and models with team members using MLflow's collaboration features.
 
+BEFORE EXPERIMENTING:
+
+cd cryptopythia
+source mlflowtensor/bin/activate #Activate your custom env
+
+Step 1: Start the MLflow Server
+Ensure that the MLflow server is running. You can start the MLflow server using the following command:
+
+mlflow server --backend-store-uri file:/INSERT YOUR PATH HERE --default-artifact-root file:/ INSERT PATH HERE /mlruns/artifacts --host 0.0.0.0 --port 8000
+
 #### 1. Experiment Tracking
 
 **Functionality**: Track experiments to log parameters, metrics, and artifacts.
